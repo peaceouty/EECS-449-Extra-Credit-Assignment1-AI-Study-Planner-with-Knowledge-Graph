@@ -393,5 +393,5 @@ Thanks to the Jaseci team for creating a language that makes graph-based AI appl
 
 **Repository**: https://github.com/peaceouty/EECS-449-Extra-Credit-Assignment1-AI-Study-Planner-with-Knowledge-Graph  
 **Submission Date**: February 2026  
-**Estimated EC**: 3% (goes significantly beyond minimal additions)  
-**Status**: ✅ Complete - Ready for 2-3% extra credit consideration
+
+

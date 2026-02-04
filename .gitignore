@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+__jac_gen__/
+.jac/
+*.jac.py
+.env
+.vscode/
+*.log
+node_modules/

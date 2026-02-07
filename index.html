@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Planner - Knowledge Graph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .auth-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .hidden { display: none !important; }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            margin-left: 10px;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        .main-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .path-item {
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .path-item:hover, .path-item.active {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+        
+        .path-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .path-meta {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        #knowledge-graph {
+            width: 100%;
+            height: 500px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            background: #f7fafc;
+        }
+        
+        .topic-list {
+            list-style: none;
+        }
+        
+        .topic-item {
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .topic-info {
+            flex: 1;
+        }
+        
+        .topic-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2d3748;
+        }
+        
+        .topic-meta {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 5px;
+            text-transform: uppercase;
+        }
+        
+        .badge-beginner { background: #c6f6d5; color: #22543d; }
+        .badge-intermediate { background: #fef5e7; color: #975a16; }
+        .badge-advanced { background: #fed7d7; color: #742a2a; }
+        .badge-expert { background: #fbb6ce; color: #702459; }
+        
+        .badge-not_started { background: #edf2f7; color: #4a5568; }
+        .badge-learning { background: #bee3f8; color: #2c5282; }
+        .badge-practiced { background: #c6f6d5; color: #22543d; }
+        .badge-reviewing { background: #fef5e7; color: #975a16; }
+        .badge-mastered { background: #9ae6b4; color: #22543d; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .review-due {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .review-due-title {
+            font-weight: 600;
+            color: #c53030;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 AI Study Planner</h1>
+            <div class="subtitle">Knowledge Graph + Spaced Repetition + AI Recommendations</div>
+        </div>
+        
+        <!-- Auth Section -->
+        <div id="authSection" class="auth-section">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            
+            <button class="btn btn-primary" onclick="login()">Login</button>
+            <button class="btn btn-secondary" onclick="register()">Register</button>
+        </div>
+        
+        <!-- Dashboard -->
+        <div id="dashboardSection" class="dashboard hidden">
+            <div class="sidebar">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Learning Paths</h3>
+                    <button class="btn btn-success" onclick="showNewPathModal()">+</button>
+                </div>
+                <div id="pathsList"></div>
+                <button class="btn btn-secondary" onclick="logout()" style="width: 100%; margin-top: 20px;">Logout</button>
+            </div>
+            
+            <div class="main-content">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('graph')">Knowledge Graph</div>
+                    <div class="tab" onclick="switchTab('topics')">Topics</div>
+                    <div class="tab" onclick="switchTab('stats')">Statistics</div>
+                </div>
+                
+                <div id="reviewAlert" class="review-due hidden">
+                    <div class="review-due-title">⏰ Reviews Due Today</div>
+                    <div id="reviewList"></div>
+                </div>
+                
+                <div id="graphView">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                        <h2>Knowledge Graph</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="showAddTopicModal()">Add Topic</button>
+                            <button class="btn btn-success" onclick="aiGenerate()">AI Generate</button>
+                        </div>
+                    </div>
+                    <div id="knowledge-graph"></div>
+                    <div style="margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                        <strong>AI Recommendation:</strong>
+                        <div id="aiSuggestion">Loading...</div>
+                    </div>
+                </div>
+                
+                <div id="topicsView" class="hidden">
+                    <h2>All Topics</h2>
+                    <ul id="topicsList" class="topic-list"></ul>
+                </div>
+                
+                <div id="statsView" class="hidden">
+                    <h2>Learning Statistics</h2>
+                    <div id="statsContent" class="stats-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- New Path Modal -->
+    <div id="newPathModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Create Learning Path</div>
+            <div class="form-group">
+                <label>Path Name</label>
+                <input type="text" id="newPathName" placeholder="e.g., Machine Learning Basics">
+            </div>
+            <div class="form-group">
+                <label>Learning Goal</label>
+                <textarea id="newPathGoal" rows="3" placeholder="What do you want to learn?"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="createPath()">Create</button>
+            <button class="btn btn-secondary" onclick="hideNewPathModal()">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Add Topic Modal -->
+    <div id="addTopicModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Add Topic</div>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="newTopicTitle" placeholder="Topic title">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="newTopicDesc" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Difficulty</label>
+                <select id="newTopicDiff">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="expert">Expert</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Estimated Hours</label>
+                <input type="number" id="newTopicHours" value="2" step="0.5">
+            </div>
+            <button class="btn btn-primary" onclick="addTopic()">Add</button>
+            <button class="btn btn-secondary" onclick="hideAddTopicModal()">Cancel</button>
+        </div>
+    </div>
+    
+    <!-- Study Session Modal -->
+    <div id="sessionModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">Log Study Session</div>
+            <div id="sessionTopicTitle" style="margin-bottom: 20px; color: #667eea; font-weight: 600;"></div>
+            <div class="form-group">
+                <label>Duration (minutes)</label>
+                <input type="number" id="sessionDuration" value="30" min="1">
+            </div>
+            <div class="form-group">
+                <label>Understanding Quality (1-5)</label>
+                <select id="sessionQuality">
+                    <option value="5">5 - Perfect recall</option>
+                    <option value="4">4 - Correct with hesitation</option>
+                    <option value="3" selected>3 - Correct with difficulty</option>
+                    <option value="2">2 - Incorrect, seemed familiar</option>
+                    <option value="1">1 - Complete blackout</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notes (optional)</label>
+                <textarea id="sessionNotes" rows="3"></textarea>
+            </div>
+            <button class="btn btn-success" onclick="logSession()">Save Session</button>
+            <button class="btn btn-secondary" onclick="hideSessionModal()">Cancel</button>
+        </div>
+    </div>
+    
+    <script>
+        let currentUser = null;
+        let currentPath = null;
+        let currentTopics = [];
+        let currentTab = 'graph';
+        let selectedTopicId = null;
+        const API = 'http://localhost:8000';
+        
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (!username || !password) return alert('Enter credentials');
+            
+            const res = await fetch(`${API}/walker/api_register`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert('Registered! Please login.');
+            } else {
+                alert(data.message);
+            }
+        }
+        
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (!username || !password) return alert('Enter credentials');
+            
+            const res = await fetch(`${API}/walker/api_login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                currentUser = username;
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('dashboardSection').classList.remove('hidden');
+                loadPaths();
+            } else {
+                alert(data.message);
+            }
+        }
+        
+        function logout() {
+            currentUser = null;
+            currentPath = null;
+            document.getElementById('authSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+        }
+        
+        async function loadPaths() {
+            const res = await fetch(`${API}/walker/api_list_paths`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser})
+            });
+            const data = await res.json();
+            const container = document.getElementById('pathsList');
+            container.innerHTML = '';
+            
+            if (data.paths && data.paths.length > 0) {
+                data.paths.forEach(path => {
+                    const div = document.createElement('div');
+                    div.className = 'path-item';
+                    if (currentPath && currentPath.id === path.id) div.classList.add('active');
+                    div.innerHTML = `
+                        <div class="path-name">${path.name}</div>
+                        <div class="path-meta">${path.mastered}/${path.topics} mastered</div>
+                    `;
+                    div.onclick = () => selectPath(path);
+                    container.appendChild(div);
+                });
+                if (!currentPath) selectPath(data.paths[0]);
+            } else {
+                container.innerHTML = '<p style="color: #999;">No paths yet. Create one!</p>';
+            }
+        }
+        
+        async function selectPath(path) {
+            currentPath = path;
+            loadPaths();
+            await loadTopics();
+            await checkReviews();
+            await loadAISuggestion();
+            renderGraph();
+            if (currentTab === 'stats') loadStats();
+        }
+        
+        async function loadTopics() {
+            const res = await fetch(`${API}/walker/api_get_topics`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser, path_id: currentPath.id})
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                currentTopics = data.topics || [];
+                renderTopicsList();
+            }
+        }
+        
+        function renderTopicsList() {
+            const list = document.getElementById('topicsList');
+            list.innerHTML = '';
+            currentTopics.forEach(topic => {
+                const li = document.createElement('li');
+                li.className = 'topic-item';
+                li.innerHTML = `
+                    <div class="topic-info">
+                        <div class="topic-title">${topic.title}</div>
+                        <div class="topic-meta">
+                            <span class="badge badge-${topic.difficulty}">${topic.difficulty}</span>
+                            <span class="badge badge-${topic.mastery}">${topic.mastery.replace('_', ' ')}</span>
+                            ${topic.actual_hours}h / ${topic.estimated_hours}h
+                            ${topic.review_count > 0 ? `• ${topic.review_count} reviews` : ''}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${Math.min(topic.actual_hours / topic.estimated_hours * 100, 100)}%"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="showSessionModal(${topic.id}, '${topic.title}')">Study</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+        
+        function renderGraph() {
+            const svg = d3.select('#knowledge-graph');
+            svg.selectAll('*').remove();
+            
+            if (currentTopics.length === 0) {
+                svg.append('text')
+                    .attr('x', '50%')
+                    .attr('y', '50%')
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', '#999')
+                    .text('No topics yet. Add some or use AI generation!');
+                return;
+            }
+            
+            const width = document.getElementById('knowledge-graph').clientWidth;
+            const height = 500;
+            
+            const svgEl = svg.append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            const nodes = currentTopics.map(t => ({
+                id: t.id,
+                title: t.title,
+                mastery: t.mastery,
+                difficulty: t.difficulty
+            }));
+            
+            const links = [];
+            currentTopics.forEach(t => {
+                t.prerequisites.forEach(preId => {
+                    links.push({source: preId, target: t.id});
+                });
+            });
+            
+            const simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(50));
+            
+            const link = svgEl.append('g')
+                .selectAll('line')
+                .data(links)
+                .enter().append('line')
+                .attr('stroke', '#cbd5e0')
+                .attr('stroke-width', 2)
+                .attr('marker-end', 'url(#arrowhead)');
+            
+            svgEl.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 25)
+                .attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .append('svg:path')
+                .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+                .attr('fill', '#cbd5e0');
+            
+            const node = svgEl.append('g')
+                .selectAll('g')
+                .data(nodes)
+                .enter().append('g')
+                .call(d3.drag()
+                    .on('start', dragstarted)
+                    .on('drag', dragged)
+                    .on('end', dragended));
+            
+            const masteryColors = {
+                0: '#edf2f7',
+                1: '#bee3f8',
+                2: '#90cdf4',
+                3: '#fef5e7',
+                4: '#9ae6b4'
+            };
+            
+            node.append('circle')
+                .attr('r', 30)
+                .attr('fill', d => masteryColors[d.mastery] || '#edf2f7')
+                .attr('stroke', '#667eea')
+                .attr('stroke-width', 2);
+            
+            node.append('text')
+                .attr('dy', 4)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .text(d => d.id);
+            
+            node.append('title')
+                .text(d => d.title);
+            
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+            
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+        
+        async function checkReviews() {
+            const res = await fetch(`${API}/walker/api_reviews_due`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser, path_id: currentPath.id})
+            });
+            const data = await res.json();
+            if (data.status === 'success' && data.count > 0) {
+                document.getElementById('reviewAlert').classList.remove('hidden');
+                const list = document.getElementById('reviewList');
+                list.innerHTML = data.due.map(t => `• ${t.title} (${t.review_count} reviews)`).join('<br>');
+            } else {
+                document.getElementById('reviewAlert').classList.add('hidden');
+            }
+        }
+        
+        async function loadAISuggestion() {
+            const res = await fetch(`${API}/walker/api_suggest_next`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser, path_id: currentPath.id})
+            });
+            const data = await res.json();
+            const div = document.getElementById('aiSuggestion');
+            if (data.suggestion) {
+                div.innerHTML = `📚 Study "${data.suggestion.title}" next (${data.suggestion.mastery.replace('_', ' ')})`;
+            } else {
+                div.innerHTML = data.message || 'All topics mastered!';
+            }
+        }
+        
+        async function loadStats() {
+            const res = await fetch(`${API}/walker/api_get_stats`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser, path_id: currentPath.id})
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                const container = document.getElementById('statsContent');
+                container.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${data.total_topics}</div>
+                        <div class="stat-label">Total Topics</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.total_hours}h</div>
+                        <div class="stat-label">Study Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.completion}%</div>
+                        <div class="stat-label">Completion</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.mastery.mastered}</div>
+                        <div class="stat-label">Mastered</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${data.sessions}</div>
+                        <div class="stat-label">Sessions</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('graphView').classList.add('hidden');
+            document.getElementById('topicsView').classList.add('hidden');
+            document.getElementById('statsView').classList.add('hidden');
+            
+            if (tab === 'graph') {
+                document.getElementById('graphView').classList.remove('hidden');
+                renderGraph();
+            } else if (tab === 'topics') {
+                document.getElementById('topicsView').classList.remove('hidden');
+            } else if (tab === 'stats') {
+                document.getElementById('statsView').classList.remove('hidden');
+                loadStats();
+            }
+        }
+        
+        function showNewPathModal() {
+            document.getElementById('newPathModal').classList.remove('hidden');
+        }
+        
+        function hideNewPathModal() {
+            document.getElementById('newPathModal').classList.add('hidden');
+        }
+        
+        async function createPath() {
+            const name = document.getElementById('newPathName').value;
+            const goal = document.getElementById('newPathGoal').value;
+            if (!name || !goal) return alert('Fill all fields');
+            
+            const res = await fetch(`${API}/walker/api_create_path`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: currentUser, name, goal})
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                hideNewPathModal();
+                loadPaths();
+            }
+        }
+        
+        function showAddTopicModal() {
+            if (!currentPath) return alert('Select a path first');
+            document.getElementById('addTopicModal').classList.remove('hidden');
+        }
+        
+        function hideAddTopicModal() {
+            document.getElementById('addTopicModal').classList.add('hidden');
+        }
+        
+        async function addTopic() {
+            const title = document.getElementById('newTopicTitle').value;
+            const description = document.getElementById('newTopicDesc').value;
+            const difficulty = document.getElementById('newTopicDiff').value;
+            const estimated_hours = parseFloat(document.getElementById('newTopicHours').value);
+            
+            if (!title) return alert('Enter title');
+            
+            const res = await fetch(`${API}/walker/api_add_topic`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: currentUser,
+                    path_id: currentPath.id,
+                    title,
+                    description,
+                    difficulty,
+                    estimated_hours,
+                    prerequisite_ids: []
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                hideAddTopicModal();
+                loadTopics();
+            }
+        }
+        
+        async function aiGenerate() {
+            if (!currentPath) return alert('Select a path first');
+            if (!confirm('AI will generate 6 topics. Continue?')) return;
+            
+            const res = await fetch(`${API}/walker/api_ai_generate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: currentUser,
+                    path_id: currentPath.id,
+                    num_topics: 6
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert(`Generated ${data.count} topics!`);
+                loadTopics();
+            }
+        }
+        
+        function showSessionModal(topicId, title) {
+            selectedTopicId = topicId;
+            document.getElementById('sessionTopicTitle').textContent = title;
+            document.getElementById('sessionModal').classList.remove('hidden');
+        }
+        
+        function hideSessionModal() {
+            document.getElementById('sessionModal').classList.add('hidden');
+        }
+        
+        async function logSession() {
+            const duration = parseInt(document.getElementById('sessionDuration').value);
+            const quality = parseInt(document.getElementById('sessionQuality').value);
+            const notes = document.getElementById('sessionNotes').value;
+            
+            const res = await fetch(`${API}/walker/api_log_session`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: currentUser,
+                    path_id: currentPath.id,
+                    topic_id: selectedTopicId,
+                    duration,
+                    quality,
+                    notes
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert(`Session logged! Next review: ${data.next_review}`);
+                hideSessionModal();
+                loadTopics();
+                checkReviews();
+                loadAISuggestion();
+            }
+        }
+    </script>
+</body>
+</html>

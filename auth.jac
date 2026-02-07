@@ -1,12 +1,12 @@
 """Authentication walkers"""
 
-import:jac from models, User, Root;
+import from models { User }
 
 walker register {
     has username: str;
     has password: str;
     
-    can signup with Root entry {
+    can signup with `root entry {
         users = [-->];
         for u in users {
             if u.username == self.username {
@@ -14,13 +14,14 @@ walker register {
                 disengage;
             }
         }
-        new_user = here ++> User(
+        new_user = User(
             username=self.username,
             password=self.password,
             total_study_hours=0.0,
             streak_days=0,
             next_path_id=1
         );
+        here ++> new_user;
         report {"status": "success", "user": new_user};
     }
 }
@@ -29,7 +30,7 @@ walker login {
     has username: str;
     has password: str;
     
-    can auth with Root entry {
+    can auth with `root entry {
         users = [-->];
         for u in users {
             if u.username == self.username and u.password == self.password {

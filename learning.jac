@@ -1,7 +1,14 @@
 """Learning path and topic management walkers"""
 
-import:jac from models, Path, Topic, Session, User, Difficulty, Mastery, Prerequisite, RelatedTo, llm;
-import:py from datetime, datetime, timedelta;
+import from models { Path, Topic, Session, User, Difficulty, Mastery, Prerequisite, RelatedTo, llm }
+import from datetime { datetime, timedelta }
+
+"""Generate structured learning topics for a given learning goal.
+Each topic has: title, description, difficulty (beginner/intermediate/advanced/expert), estimated_hours.
+Order from foundational to advanced."""
+def generate_topic_list(goal: str, num_topics: int) -> list[dict] by llm(
+    method="Reason"
+);
 
 # create new learning path
 walker create_path {
@@ -11,7 +18,7 @@ walker create_path {
     can create with User entry {
         paths = [-->];
         now = datetime.now().strftime("%Y-%m-%d %H:%M");
-        new_path = here ++> Path(
+        new_path = Path(
             id=here.next_path_id,
             name=self.name,
             goal=self.goal,
@@ -19,6 +26,7 @@ walker create_path {
             next_topic_id=1,
             next_session_id=1
         );
+        here ++> new_path;
         here.next_path_id += 1;
         report {"status": "success", "path": new_path};
     }
@@ -34,19 +42,12 @@ walker ai_generate_topics {
         for path in paths {
             if path.id == self.path_id {
                 # AI generates structured topic breakdown
-                topics_data: list[dict] = [] by llm(
-                    reason=True,
-                    incl_info=(
-                        f"Generate {self.num_topics} learning topics for: {path.goal}. "
-                        "Each topic should have: title (str), description (str), difficulty (beginner/intermediate/advanced/expert), estimated_hours (float). "
-                        "Order from foundational to advanced."
-                    )
-                );
+                topics_data = generate_topic_list(path.goal, self.num_topics);
                 
                 created_topics = [];
                 prev_topic = None;
                 
-                for i, topic_dict in enumerate(topics_data) {
+                for (i, topic_dict) in enumerate(topics_data) {
                     if i >= self.num_topics { break; }
                     
                     # map difficulty
@@ -59,7 +60,7 @@ walker ai_generate_topics {
                     };
                     diff_val = diff_map.get(diff_str, Difficulty.BEGINNER);
                     
-                    new_topic = path ++> Topic(
+                    new_topic = Topic(
                         id=path.next_topic_id,
                         title=topic_dict.get("title", f"Topic {i+1}"),
                         description=topic_dict.get("description", ""),
@@ -71,11 +72,12 @@ walker ai_generate_topics {
                         ease_factor=2.5,
                         interval_days=0
                     );
+                    path ++> new_topic;
                     path.next_topic_id += 1;
                     
                     # create prerequisite chain
                     if prev_topic is not None {
-                        prev_topic +[Prerequisite(strength=0.9)]->+ new_topic;
+                        prev_topic +>: Prerequisite(strength=0.9) :+> new_topic;
                     }
                     
                     prev_topic = new_topic;
@@ -111,7 +113,7 @@ walker add_topic {
                 };
                 diff_val = diff_map.get(self.difficulty.lower(), Difficulty.BEGINNER);
                 
-                new_topic = path ++> Topic(
+                new_topic = Topic(
                     id=path.next_topic_id,
                     title=self.title,
                     description=self.description,
@@ -123,13 +125,14 @@ walker add_topic {
                     ease_factor=2.5,
                     interval_days=0
                 );
+                path ++> new_topic;
                 path.next_topic_id += 1;
                 
                 # link prerequisites
-                topics = [path -->];
+                topics = [path -->](`?Topic);
                 for topic in topics {
                     if topic.id in self.prerequisite_ids {
-                        topic +[Prerequisite(strength=1.0)]->+ new_topic;
+                        topic +>: Prerequisite(strength=1.0) :+> new_topic;
                     }
                 }
                 
@@ -147,7 +150,7 @@ walker list_paths {
         paths = [-->];
         result = [];
         for path in paths {
-            topics = [path -->];
+            topics = [path -->](`?Topic);
             topic_count = len(topics);
             mastered = 0;
             for t in topics {
@@ -176,12 +179,12 @@ walker get_topics {
         paths = [-->];
         for path in paths {
             if path.id == self.path_id {
-                topics = [path -->];
+                topics = [path -->](`?Topic);
                 result = [];
                 for topic in topics {
                     # get prerequisites
                     prereqs = [];
-                    incoming = [--> topic];
+                    incoming = [topic <--](`?Topic);
                     for pre in incoming {
                         prereqs.append(pre.id);
                     }
@@ -219,12 +222,12 @@ walker log_session {
         paths = [-->];
         for path in paths {
             if path.id == self.path_id {
-                topics = [path -->];
+                topics = [path -->](`?Topic);
                 for topic in topics {
                     if topic.id == self.topic_id {
                         # create session
                         now = datetime.now().strftime("%Y-%m-%d %H:%M");
-                        new_session = path ++> Session(
+                        new_session = Session(
                             id=path.next_session_id,
                             topic_id=self.topic_id,
                             date=now,
@@ -232,6 +235,7 @@ walker log_session {
                             quality=self.quality,
                             notes=self.notes
                         );
+                        path ++> new_session;
                         path.next_session_id += 1;
                         
                         # update topic
@@ -246,7 +250,7 @@ walker log_session {
                             } elif topic.review_count == 2 {
                                 topic.interval_days = 6;
                             } else {
-                                topic.interval_days = int(topic.interval_days * topic.ease_factor);
+                                topic.interval_days = int(float(topic.interval_days) * topic.ease_factor);
                             }
                             
                             topic.ease_factor = topic.ease_factor + (0.1 - (5 - self.quality) * (0.08 + (5 - self.quality) * 0.02));
@@ -297,7 +301,7 @@ walker get_reviews_due {
         paths = [-->];
         for path in paths {
             if path.id == self.path_id {
-                topics = [path -->];
+                topics = [path -->](`?Topic);
                 today = datetime.now().strftime("%Y-%m-%d");
                 due_topics = [];
                 
@@ -328,7 +332,7 @@ walker ai_suggest_next {
         paths = [-->];
         for path in paths {
             if path.id == self.path_id {
-                topics = [path -->];
+                topics = [path -->](`?Topic);
                 
                 # find ready topics (prerequisites met)
                 ready = [];
@@ -337,7 +341,7 @@ walker ai_suggest_next {
                         continue;
                     }
                     
-                    prereqs = [--> topic];
+                    prereqs = [topic <--];
                     all_met = True;
                     for pre in prereqs {
                         if pre.mastery != Mastery.MASTERED and pre.mastery != Mastery.REVIEWING {
@@ -359,7 +363,7 @@ walker ai_suggest_next {
                 # prioritize by review schedule and mastery
                 best = ready[0];
                 for topic in ready {
-                    if topic.mastery < best.mastery {
+                    if topic.mastery.value < best.mastery.value {
                         best = topic;
                     } elif topic.mastery == best.mastery {
                         if topic.next_review != "" and (best.next_review == "" or topic.next_review < best.next_review) {
@@ -384,8 +388,8 @@ walker get_stats {
         paths = [-->];
         for path in paths {
             if path.id == self.path_id {
-                topics = [path -->];
-                sessions = [path -->];
+                topics = [path -->](`?Topic);
+                sessions = [path -->](`?Session);
                 
                 total_topics = len(topics);
                 total_hours = 0.0;
@@ -420,8 +424,8 @@ walker get_stats {
                 report {
                     "status": "success",
                     "total_topics": total_topics,
-                    "total_hours": round(total_hours, 2),
-                    "completion": round(completion, 1),
+                    "total_hours": int(total_hours * 100) / 100.0,
+                    "completion": int(completion * 10) / 10.0,
                     "mastery": mastery_dist,
                     "sessions": len(sessions)
                 };

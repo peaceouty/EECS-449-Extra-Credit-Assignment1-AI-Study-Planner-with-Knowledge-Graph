@@ -1,9 +1,9 @@
 """AI Study Planner - Knowledge Graph Data Models"""
 
-import:py from mtllm.llms, OpenAI;
-import:py from datetime, datetime, timedelta;
+import from byllm.lib { Model }
+import from datetime { datetime, timedelta }
 
-glob llm = OpenAI(model_name="gpt-4");
+glob llm = Model(model_name="gpt-4o-mini");
 
 # difficulty levels
 enum Difficulty {

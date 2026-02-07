@@ -34,6 +34,14 @@ pip install jaclang
 pip install -r requirements.txt
 ```
 
+For AI features (topic generation via LLM), set your OpenAI API key:
+```bash
+export OPENAI_API_KEY="your-key-here"   # Linux/Mac
+set OPENAI_API_KEY=your-key-here         # Windows CMD
+$env:OPENAI_API_KEY="your-key-here"      # PowerShell
+```
+> The CLI demo (`jac run main.jac`) works without an API key — it uses hardcoded example data.
+
 ## How to Run
 
 **CLI demo** (shows the full workflow — registration, AI topic generation, study sessions, SM-2 scheduling):
@@ -43,9 +51,11 @@ jac run main.jac
 
 **Web interface:**
 ```bash
-jac serve server.jac
+jac start server.jac
 ```
 Then open `index.html` in your browser. Server runs on `http://localhost:8000`.
+
+The server uses Jac's built-in auth system. Register via `POST /user/register` with `{"username": "...", "password": "..."}` to get a token, then pass it as `Authorization: Bearer <token>` to call walker endpoints.
 
 ## Custom Feature Details
 
@@ -76,11 +86,10 @@ The D3.js force-directed graph lets you drag nodes around, and colors indicate m
 - Custom nodes with typed properties (`Topic`, `Session`, `Path`, `User`)
 - Custom edges with properties (`Prerequisite`, `RelatedTo`)
 - Enums (`Difficulty`, `Mastery`)
-- Walker composition (walkers spawning other walkers)
-- Graph traversal (`[-->]`, type filtering with `(?User)`)
+- Graph traversal (`[-->]`, type filtering with `` (`?User) ``)
 - `byLLM` for AI-generated structured data
 - Multi-file project structure with imports
-- REST API via `jac serve`
+- REST API via `jac start`
 
 ## Testing
 
@@ -89,7 +98,7 @@ The D3.js force-directed graph lets you drag nodes around, and colors indicate m
 jac run main.jac
 
 # Web server - interactive graph UI
-jac serve server.jac
+jac start server.jac
 ```
 
 ## Resources
